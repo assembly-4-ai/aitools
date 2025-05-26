@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\UniversalLLMClient_autogen\mocs_compilation_Debug.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\ui\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\ui\mainwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\llm_services\llm_service.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\llm_services\gemini_service.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\llm_services\ollama_service.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\llm_services\openai_compatible_service.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\command_lib\command_library.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\logging\session_logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\orchestration\orchestrator_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\terminal_interaction\terminal_process_handler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\UniversalLLMClient_autogen\mocs_compilation_Release.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\UniversalLLMClient_autogen\mocs_compilation_MinSizeRel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\UniversalLLMClient_autogen\mocs_compilation_RelWithDebInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\assem\Documents\GitHub\aitools\aitools\aitools\UniversalLLMClient\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{F72F18C0-8558-3134-AC3B-771C46E7DD90}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

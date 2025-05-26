@@ -1,0 +1,10 @@
+^C:\USERS\ASSEM\DOCUMENTS\GITHUB\AITOOLS\AITOOLS\AITOOLS\UNIVERSALLLMCLIENT\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/assem/Documents/GitHub/aitools/aitools/aitools/UniversalLLMClient -BC:/Users/assem/Documents/GitHub/aitools/aitools/aitools/UniversalLLMClient --check-stamp-file C:/Users/assem/Documents/GitHub/aitools/aitools/aitools/UniversalLLMClient/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
