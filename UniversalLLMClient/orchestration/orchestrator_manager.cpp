@@ -96,6 +96,22 @@ void OrchestratorManager::stopOrchestration() {
     emit orchestratorDisplayMessage("Orchestration stopped.");
 }
 
+OrchestratorManager::OrchestrationState OrchestratorManager::getState() const {
+    return m_state;
+}
+
+bool OrchestratorManager::isRunning() const {
+    // Consider WaitingForUser and WaitingForCommand as "running" states
+    return m_state == OrchestrationState::Running || 
+           m_state == OrchestrationState::WaitingForUser ||
+           m_state == OrchestrationState::WaitingForCommand;
+}
+
+bool OrchestratorManager::hasValidLlmService() const {
+    // Ensure m_llmService is not null before calling isConfigured to prevent crashes
+    return m_llmService != nullptr && m_llmService->isConfigured();
+}
+
 void OrchestratorManager::provideUserInput(const QString& input) {
     if (m_state != OrchestrationState::WaitingForUser) {
         emit orchestratorDisplayMessage("Orchestrator is not waiting for user input.", true);

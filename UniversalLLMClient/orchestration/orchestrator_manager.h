@@ -23,6 +23,9 @@ public:
                                  QObject *parent = nullptr);
     ~OrchestratorManager() override = default;
 
+    // Public enum for state
+    enum class OrchestrationState { Idle, Running, Paused, WaitingForUser, WaitingForCommand };
+
     // Public methods to control orchestration
     Q_INVOKABLE void startOrchestration(const QStringList& todoList);
     Q_INVOKABLE void stopOrchestration();
@@ -32,6 +35,11 @@ public:
 
     // Method for MainWindow to feed back command execution results
     Q_INVOKABLE void processExternalCommandResult(const QString& commandName, const QString& output, const QString& error);
+
+    // New public methods
+    OrchestrationState getState() const; 
+    bool isRunning() const; // Convenience method
+    bool hasValidLlmService() const;
 
 
 signals:
@@ -74,7 +82,7 @@ private:
 
     QStringList m_todoList;
     int m_currentTaskIndex;
-    enum class OrchestrationState { Idle, Running, Paused, WaitingForUser, WaitingForCommand };
+    // OrchestrationState enum moved to public
     OrchestrationState m_state;
 
     // QFutureWatcher for LLM calls made by the orchestrator for its planning/execution

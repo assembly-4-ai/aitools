@@ -287,7 +287,7 @@ void MainWindow::saveAppSettings() {
 }
 
 void MainWindow::setActiveService(LLMService* service) {
-    if (m_orchestratorManager && m_orchestratorManager->m_state != OrchestratorManager::OrchestrationState::Idle) {
+    if (m_orchestratorManager && m_orchestratorManager->isRunning()) {
         QMessageBox::warning(this, "Orchestration Active", 
                                 "An orchestration task is currently running. Please stop it before changing the LLM service.");
         delete service; // Clean up the newly created service as it won't be used
@@ -561,7 +561,7 @@ void MainWindow::onOrchestratorStartClicked() {
         // For now, we pass the currently active service.
         // m_orchestratorManager->setLlmService(m_currentService.get()); // If such setter existed
     }
-    if (!m_orchestratorManager->m_llmService || !m_orchestratorManager->m_llmService->isConfigured()) {
+    if (m_orchestratorManager && !m_orchestratorManager->hasValidLlmService()) {
          QMessageBox::warning(this, "Orchestrator LLM Service Error", "The LLM service for the orchestrator is not configured or unavailable. Please select and configure a service in the Chat tab first.");
          return;
     }
