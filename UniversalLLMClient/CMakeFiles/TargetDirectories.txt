@@ -1,3 +1,0 @@
-C:/Users/assem/Documents/GitHub/aitools/aitools/aitools/UniversalLLMClient/CMakeFiles/UniversalLLMClient.dir
-C:/Users/assem/Documents/GitHub/aitools/aitools/aitools/UniversalLLMClient/CMakeFiles/ALL_BUILD.dir
-C:/Users/assem/Documents/GitHub/aitools/aitools/aitools/UniversalLLMClient/CMakeFiles/ZERO_CHECK.dir
