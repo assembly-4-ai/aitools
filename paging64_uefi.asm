@@ -11,14 +11,17 @@ global unmap_page
 global map_2mb_page
 global unmap_2mb_page
 global reload_cr3
-global kernel_pml4         ; Expose the variable holding the final PML4 address
 
-extern pmm_alloc_frame ; Use PMM for page table allocation now
-extern _kernel_start   ; Defined by linker script
-extern _kernel_end     ; Defined by linker script
+extern pmm_alloc_frame
+extern pmm_get_node_for_addr
+extern _kernel_start
+extern _kernel_end
+extern gop_framebuffer_base
+extern gop_framebuffer_size
+extern gLocalApicAddress_acpi
+extern gIoApicAddress_acpi
 
 section .data align=8
-kernel_pml4 dq 0
 page_size_4k_minus_1 dq PAGE_SIZE_4K - 1
 page_size_2m_minus_1 dq PAGE_SIZE_2M - 1
 
@@ -41,7 +44,6 @@ zero_page_paging: ; Helper to zero 4KB page (local version to avoid extern if si
 ;-----------------------------------------------------------------------------
 pmm_alloc_zeroed_page_paging: ; Allocates and zeroes using PMM (local for paging)
                               ; Output RAX = PhysAddr or 0
-    mov rcx, -1 ; Request any node
     call pmm_alloc_frame ; RAX = Physical address or 0
     test rax, rax
     jz .pazp_alloc_fail
@@ -90,12 +92,32 @@ map_page_internal: ; Input: RDI=Virt, RSI=Phys, RDX=Flags, R12=PageSizeFlag(0/PT
     test r9, PTE_PRESENT
     jnz .mpi_pdpt
 
+    ; Prepare for NUMA-aware allocation for PDPT
+    push rdi ; Preserve current RDI (used for PML4 index access)
+    push rsi ; Preserve current RSI (original Physical Address argument)
+    push rax ; Preserve RAX (used by pmm_get_node_for_addr)
+    mov rdi, rsi               ; Set RDI for pmm_get_node_for_addr (RSI holds original PhysAddr)
+    call pmm_get_node_for_addr ; Input RDI=PhysAddr, Output RAX=NodeID
+    mov rcx, rax               ; RCX = NodeID for pmm_alloc_zeroed_page_paging
+    cmp rcx, 0
+    jge .valid_node_pdpt_alloc_site1
+    mov rcx, -1                ; Default to -1 (any node)
+.valid_node_pdpt_alloc_site1:
     call pmm_alloc_zeroed_page_paging ; RAX = PhysAddr of new PDPT or 0
     test rax, rax
-    jz .mpi_err_map_internal
-    mov r9, rax ; New PDPT physical address
+    jz .mpi_err_alloc_pdpt_site1 ; Jump to specific error handler to restore stack
+    mov r9, rax ; New PDPT physical address. RAX is now free.
+    pop rax     ; Restore original RAX
+    pop rsi     ; Restore original RSI
+    pop rdi     ; Restore original RDI
     or r9, PTE_PRESENT | PTE_WRITABLE | PTE_USER ; Flags for PML4E
     mov [r10], r9 ; Write back new PML4 entry
+    jmp .mpi_pdpt ; Continue to PDPT processing (original next label)
+.mpi_err_alloc_pdpt_site1:
+    pop rax     ; Restore original RAX
+    pop rsi     ; Restore original RSI
+    pop rdi     ; Restore original RDI
+    jmp .mpi_err_map_internal ; Common error exit
 
 .mpi_pdpt:
     ; --- Level 3: PDPT ---
@@ -112,12 +134,26 @@ map_page_internal: ; Input: RDI=Virt, RSI=Phys, RDX=Flags, R12=PageSizeFlag(0/PT
     test r9, PTE_PRESENT
     jnz .mpi_pd
 
-    call pmm_alloc_zeroed_page_paging ; RAX = PhysAddr of new PD or 0
+    ; Prepare for NUMA-aware allocation for PD
+    push rdi; push rsi; push rax
+    mov rdi, rsi
+    call pmm_get_node_for_addr
+    mov rcx, rax
+    cmp rcx, 0
+    jge .valid_node_pd_alloc_site2
+    mov rcx, -1
+.valid_node_pd_alloc_site2:
+    call pmm_alloc_zeroed_page_paging
     test rax, rax
-    jz .mpi_err_map_internal
-    mov r9, rax ; New PD physical address
+    jz .mpi_err_alloc_pd_site2
+    mov r9, rax
+    pop rax; pop rsi; pop rdi
     or r9, PTE_PRESENT | PTE_WRITABLE | PTE_USER ; Flags for PDPTE
-    mov [r10], r9 ; Write back new PDPT entry
+    mov [r10], r9
+    jmp .mpi_pd ; Continue to PD processing (original next label)
+.mpi_err_alloc_pd_site2:
+    pop rax; pop rsi; pop rdi
+    jmp .mpi_err_map_internal
 
 .mpi_pd:
     ; --- Level 2: PD ---
@@ -143,12 +179,26 @@ map_page_internal: ; Input: RDI=Virt, RSI=Phys, RDX=Flags, R12=PageSizeFlag(0/PT
     test r9, PTE_PRESENT
     jnz .mpi_pt
 
-    call pmm_alloc_zeroed_page_paging ; RAX = PhysAddr of new PT or 0
+    ; Prepare for NUMA-aware allocation for PT
+    push rdi; push rsi; push rax
+    mov rdi, rsi
+    call pmm_get_node_for_addr
+    mov rcx, rax
+    cmp rcx, 0
+    jge .valid_node_pt_alloc_site3
+    mov rcx, -1
+.valid_node_pt_alloc_site3:
+    call pmm_alloc_zeroed_page_paging
     test rax, rax
-    jz .mpi_err_map_internal
-    mov r9, rax ; New PT physical address
+    jz .mpi_err_alloc_pt_site3
+    mov r9, rax
+    pop rax; pop rsi; pop rdi
     or r9, PTE_PRESENT | PTE_WRITABLE | PTE_USER ; Flags for PDE
-    mov [r10], r9 ; Write back new PDE
+    mov [r10], r9
+    jmp .mpi_pt ; Continue to PT processing (original next label)
+.mpi_err_alloc_pt_site3:
+    pop rax; pop rsi; pop rdi
+    jmp .mpi_err_map_internal
 
 .mpi_pt:
     ; --- Level 1: PT ---
@@ -289,6 +339,7 @@ paging_init_64_uefi: ; Input: RCX=MapPtr, RDX=MapSize, R8=DescSize, R9=PtrToPML4
     push rbp
     mov rbp, rsp
     sub rsp, 8 ; Align stack
+    nop ; <--- INSERTED NOP
     push rbx
     push r12
     push r13
@@ -305,7 +356,6 @@ paging_init_64_uefi: ; Input: RCX=MapPtr, RDX=MapSize, R8=DescSize, R9=PtrToPML4
     test rax, rax
     jz .pi64u_fail_alloc_page
     mov [r15], rax        ; Store PML4 address in caller's variable
-    mov [kernel_pml4], rax ; Store in our global for map_page_internal
     mov cr3, rax           ; Load new PML4
 
     ; 2. Map the Kernel
@@ -401,6 +451,62 @@ paging_init_64_uefi: ; Input: RCX=MapPtr, RDX=MapSize, R8=DescSize, R9=PtrToPML4
     sub rcx, r10 ; Decrement remaining map size
     jmp .pi64u_memmap_loop
 .pi64u_memmap_done:
+    ; 4. Map GOP Framebuffer
+    mov rdi, [gop_framebuffer_base]
+    mov rcx, [gop_framebuffer_size]
+    test rdi, rdi ; Check if base is non-zero
+    jz .pi64u_skip_gop_map_section
+    test rcx, rcx ; Check if size is non-zero
+    jz .pi64u_skip_gop_map_section
+
+    mov r11, PAGE_SIZE_4K - 1 ; Prepare page mask in r11
+    not r11                   ; r11 is now page alignment mask (e.g., 0xFFFFFFFFFFFFF000)
+
+    mov rbx, rdi ; Save original unaligned base in RBX (for calculating end)
+    and rdi, r11 ; Align RDI (loop current address) down to page boundary for loop start
+
+    add rcx, rbx ; RCX = end address of actual framebuffer (original_base + size)
+    add rcx, PAGE_SIZE_4K - 1      ; Round up for end boundary
+    and rcx, r11                   ; RCX = page-aligned end address (exclusive) for loop comparison
+
+.pi64u_gop_map_loop:
+    cmp rdi, rcx ; Compare current aligned base with aligned end
+    jae .pi64u_gop_map_done_actual
+    mov rsi, rdi ; Physical Address is same as Virtual (RDI) for identity mapping
+    mov rdx, DEVICE_MMIO_PTE_FLAGS
+    call map_page
+    test rax, rax
+    jnz .pi64u_fail_map ; Error during GOP mapping
+    add rdi, PAGE_SIZE_4K
+    jmp .pi64u_gop_map_loop
+.pi64u_gop_map_done_actual:
+.pi64u_skip_gop_map_section:
+
+    ; 5. Map Local APIC
+    mov rdi, [gLocalApicAddress_acpi]
+    test rdi, rdi
+    jz .pi64u_skip_lapic_map
+    ; Assuming LAPIC base is page-aligned. If alignment needed and r11 clobbered:
+    ; mov r11, PAGE_SIZE_4K - 1; not r11; and rdi, r11 ; (Ensure r11 is page mask)
+    mov rsi, rdi
+    mov rdx, DEVICE_MMIO_PTE_FLAGS
+    call map_page
+    test rax, rax
+    jnz .pi64u_fail_map
+.pi64u_skip_lapic_map:
+
+    ; 6. Map I/O APIC
+    mov rdi, [gIoApicAddress_acpi]
+    test rdi, rdi
+    jz .pi64u_skip_ioapic_map
+    ; Assuming I/O APIC base is page-aligned. If alignment needed and r11 clobbered:
+    ; mov r11, PAGE_SIZE_4K - 1; not r11; and rdi, r11 ; (Ensure r11 is page mask)
+    mov rsi, rdi
+    mov rdx, DEVICE_MMIO_PTE_FLAGS
+    call map_page
+    test rax, rax
+    jnz .pi64u_fail_map
+.pi64u_skip_ioapic_map:
 
     xor rax, rax ; Success
     jmp .pi64u_exit
